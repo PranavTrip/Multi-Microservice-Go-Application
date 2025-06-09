@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/PranavTrip/go-grpc-graphql-ms/account/pb"
 	"google.golang.org/grpc"
@@ -13,6 +14,9 @@ type Client struct {
 }
 
 func NewClient(url string) (*Client, error) {
+	if url == "" {
+		return nil, fmt.Errorf("grpc target url cannot be empty")
+	}
 	conn, err := grpc.Dial(url, grpc.WithInsecure())
 	if err != nil {
 		return nil, err

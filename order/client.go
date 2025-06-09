@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -15,6 +16,9 @@ type Client struct {
 }
 
 func NewClient(url string) (*Client, error) {
+	if url == "" {
+		return nil, fmt.Errorf("grpc target url cannot be empty")
+	}
 	conn, err := grpc.Dial(url, grpc.WithInsecure())
 	if err != nil {
 		return nil, err

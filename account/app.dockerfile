@@ -1,5 +1,5 @@
 # ---------- Build Stage ----------
-FROM golang:1.21-alpine3.18 AS build
+FROM golang:1.24-alpine3.22 AS build
 
 # Install build dependencies
 RUN apk --no-cache add gcc g++ make ca-certificates
@@ -9,11 +9,11 @@ WORKDIR /go/src/github.com/PranavTrip/go-grpc-graphql-ms
 
 # Copy only the necessary files for dependency resolution and build
 COPY go.mod go.sum ./
-COPY vendor vendor
+# COPY vendor vendor
 COPY account account
 
 # Build the account service binary
-RUN go build -mod=vendor -o /go/bin/account ./account/cmd/account
+RUN GO111MODULE=on go build -o /go/bin/account ./account/cmd/account
 
 # ---------- Runtime Stage ----------
 FROM alpine:3.18
@@ -34,4 +34,4 @@ USER app
 EXPOSE 8080
 
 # Run the application
-CMD ["app"]
+CMD ["account"]
