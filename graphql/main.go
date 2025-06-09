@@ -1,10 +1,14 @@
 package main
 
-import ("log"
-"net/http"
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
 
 	"github.com/99designs/gqlgen/handler"
-	"github.com/kelseyhightower/envconfig")
+	"github.com/kelseyhightower/envconfig"
+)
 
 type AppConfig struct {
 	AccountURL string `envconfig:"ACCOUNT_SERVICE_URL"`
@@ -13,6 +17,9 @@ type AppConfig struct {
 }
 
 func main() {
+	fmt.Println("ACCOUNT_SERVICE_URL =", os.Getenv("ACCOUNT_SERVICE_URL"))
+	fmt.Println("CATALOG_SERVICE_URL =", os.Getenv("CATALOG_SERVICE_URL"))
+	fmt.Println("ORDER_SERVICE_URL =", os.Getenv("ORDER_SERVICE_URL"))
 	var cfg AppConfig
 	err := envconfig.Process("", &cfg)
 	if err != nil {
