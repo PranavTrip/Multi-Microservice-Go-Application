@@ -3,6 +3,7 @@ package order
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -80,93 +81,75 @@ func (r *postgresRepository) PutOrder(ctx context.Context, o Order) (err error) 
 }
 
 func (r *postgresRepository) GetOrderForAccount(ctx context.Context, accountID string) ([]Order, error) {
+    rows, err := r.db.QueryContext(ctx, `
+        SELECT o.id, o.created_at, o.account_id, o.total_price::money::numeric::float8, op.product_id, op.quantity
+        FROM orders o JOIN order_products op ON (o.id = op.order_id)
+        WHERE account_id = $1
+        ORDER BY o.id
+        `, accountID,
+    )
 
-	// QueryContext to get data from the DB
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT o.id, o.created_at, o.account_id, o.total_price::money::numeric::float8, op.product_id, op.quantity
-		FROM orders o JOIN order_products op ON (o.id = op.order_id)
-		WHERE account_id = $1
-		ORDER BY o.id
-		`, accountID,
-	)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	if err != nil {
-		return nil, err
-	}
+    orders := []Order{}
+    var currentOrder *Order = nil
+    var currentProducts []OrderedProduct = nil
 
-	// Close the rows
-	defer rows.Close()
+    for rows.Next() {
+        var orderID string
+        var createdAt time.Time
+        var accountIDFromDB string
+        var totalPrice float64
+        var rawProductID sql.RawBytes
+        var quantity uint32
 
-	// Orders slice - to be returned as the function response
-	orders := []Order{}
+        // Scan into local variables
+        err = rows.Scan(
+            &orderID,
+            &createdAt,
+            &accountIDFromDB,
+            &totalPrice,
+            &rawProductID, 
+            &quantity,
+        )
+        if err != nil {
+            return nil, err
+        }
 
-	// Keeps track of current order
-	order := &Order{}
+        // Convert rawProductID to string after successful scan
+        productID := string(rawProductID)
 
-	// Keeps track of previous order
-	lastOrder := &Order{}
+        // Detect if we have a new order
+        if currentOrder == nil || currentOrder.ID != orderID {
+            if currentOrder != nil {
+                currentOrder.Products = currentProducts
+                orders = append(orders, *currentOrder)
+            }
+            currentOrder = &Order{
+                ID:         orderID,
+                CreatedAt:  createdAt,
+                AccountID:  accountIDFromDB,
+                TotalPrice: totalPrice,
+            }
+            currentProducts = []OrderedProduct{}
+        }
 
-	// The ordered product
-	orderedProduct := &OrderedProduct{}
+        currentProducts = append(currentProducts, OrderedProduct{
+            ID:       productID,
+            Quantity: quantity,
+        })
+    }
 
-	// List of products in the current order
-	products := []OrderedProduct{}
+    if currentOrder != nil {
+        currentOrder.Products = currentProducts
+        orders = append(orders, *currentOrder)
+    }
 
-	// Loop over all the rows
-	for rows.Next() {
-
-		// Load the data of current row in the above defined variables
-		var productID string
-		var quantity int
-
-		if err = rows.Scan(
-			&order.ID,
-			&order.CreatedAt,
-			&order.AccountID,
-			&order.TotalPrice,
-			&orderedProduct.ID,
-			&orderedProduct.Quantity,
-		); err != nil {
-			return nil, err
-		}
-
-		// Detects if we have a new order - appends the current order to orders slice
-		if lastOrder.ID != "" && lastOrder.ID != order.ID {
-			newOrder := Order{
-				ID:         lastOrder.ID,
-				CreatedAt:  lastOrder.CreatedAt,
-				AccountID:  lastOrder.AccountID,
-				TotalPrice: lastOrder.TotalPrice,
-				Products:   lastOrder.Products,
-			}
-			orders = append(orders, newOrder)
-
-			// Reset the list of products
-			products = []OrderedProduct{}
-		}
-		// Add current product to current order
-		products = append(products, OrderedProduct{
-			ID:       orderedProduct.ID,
-			Quantity: orderedProduct.Quantity,
-		})
-		// Setting last order as current order
-		*lastOrder = *order
-	}
-
-	// Add the last order to the orders slice
-	if lastOrder != nil {
-		newOrder := Order{
-			ID:         lastOrder.ID,
-			AccountID:  lastOrder.AccountID,
-			CreatedAt:  lastOrder.CreatedAt,
-			TotalPrice: lastOrder.TotalPrice,
-			Products:   lastOrder.Products,
-		}
-		orders = append(orders, newOrder)
-	}
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-	return orders, nil
-
+    if err = rows.Err(); err != nil {
+        return nil, err
+    }
+    return orders, nil
 }
