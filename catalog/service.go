@@ -30,6 +30,7 @@ func NewService(r Repository) Service {
 }
 
 func (s *catalogService) PostProduct(ctx context.Context, name string, description string, price float64) (*Product, error) {
+	// Creates a product of Product struct to call the PutProduct from repository
 	product := &Product{
 		ID:          ksuid.New().String(),
 		Name:        name,

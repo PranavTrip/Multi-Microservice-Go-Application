@@ -27,6 +27,7 @@ func ListenGRPC(s Service, port int) error {
 }
 
 func (s *grpcServer) PostAccount(ctx context.Context, r *pb.PostAccountRequest) (*pb.PostAccountResponse, error) {
+	// Call the service function to create account
 	a, err := s.service.PostAccount(ctx, r.Name)
 	if err != nil {
 		return nil, err
@@ -40,10 +41,13 @@ func (s *grpcServer) PostAccount(ctx context.Context, r *pb.PostAccountRequest) 
 }
 
 func (s *grpcServer) GetAccount(ctx context.Context, r *pb.GetAccountRequest) (*pb.GetAccountResponse, error) {
+	// Call the service function to get the account with particular id
 	acc, err := s.service.GetAccount(ctx, r.Id)
 	if err != nil {
 		return nil, err
 	}
+
+	// Convert the response to protobuf format for grpc
 	return &pb.GetAccountResponse{
 		Account: &pb.Account{
 			Id:   acc.ID,
@@ -53,11 +57,16 @@ func (s *grpcServer) GetAccount(ctx context.Context, r *pb.GetAccountRequest) (*
 }
 
 func (s *grpcServer) GetAccounts(ctx context.Context, r *pb.GetAccountsRequest) (*pb.GetAccountsResponse, error) {
+	// Call the service function to Get all accounts
 	res, err := s.service.GetAccounts(ctx, r.Skip, r.Take)
 	if err != nil {
 		return nil, err
 	}
+
+	// Empty slice to store all accounts
 	accounts := []*pb.Account{}
+
+	// Range over the response and fill in the slice
 	for _, p := range res {
 		accounts = append(accounts, &pb.Account{
 			Id:   p.ID,

@@ -30,6 +30,7 @@ func (c *Client) Close() {
 }
 
 func (c *Client) PostProduct(ctx context.Context, name string, description string, price float64) (*Product, error) {
+	// Call the function to Post a Product 
 	res, err := c.service.PostProduct(ctx, &pb.PostProductRequest{
 		Name:        name,
 		Description: description,
@@ -48,6 +49,7 @@ func (c *Client) PostProduct(ctx context.Context, name string, description strin
 }
 
 func (c *Client) GetProduct(ctx context.Context, id string) (*Product, error) {
+	// Call the function to Get a product with a particular ID
 	res, err := c.service.GetProduct(ctx, &pb.GetProductRequest{
 		Id: id,
 	})
@@ -63,6 +65,7 @@ func (c *Client) GetProduct(ctx context.Context, id string) (*Product, error) {
 }
 
 func (c *Client) GetProducts(ctx context.Context, ids []string, skip uint64, take uint64, query string) ([]Product, error) {
+	// Calls the GetProducts function to get all products
 	res, err := c.service.GetProducts(ctx, &pb.GetProductsRequest{
 		Query: query,
 		Ids:   ids,

@@ -37,12 +37,14 @@ func NewService(r Repository) Service {
 }
 
 func (s *orderService) PostOrder(ctx context.Context, accountID string, products []OrderedProduct) (*Order, error) {
+	// Create the order using Order struct based on the details in func params
 	order := &Order{
 		ID:        ksuid.New().String(),
 		CreatedAt: time.Now().UTC(),
 		AccountID: accountID,
 		Products:  products,
 	}
+	// Set the total price based on the quantity of product
 	order.TotalPrice = 0.0
 	for _, p := range order.Products {
 		order.TotalPrice += p.Price * float64(p.Quantity)
@@ -55,6 +57,7 @@ func (s *orderService) PostOrder(ctx context.Context, accountID string, products
 
 }
 
+// Get Order for a particular account based on the accountID
 func (s orderService) GetOrderForAccount(ctx context.Context, accountID string) ([]Order, error) {
 	return s.repository.GetOrderForAccount(ctx, accountID)
 }

@@ -52,25 +52,33 @@ func ListenGRPC(s Service, accountURL string, catalogURL string, port int) error
 }
 
 func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb.PostOrderResponse, error) {
+
+	// Get account from account client using the accountID
 	_, err := s.accountClient.GetAccount(ctx, r.AccountId)
 	if err != nil {
 		log.Println("Error getting account: ", err)
 		return nil, errors.New("account not found")
 	}
 
-	// Get ordered products
+	// Empty slice for storing the product IDs of Ordered Products
 	productIDs := []string{}
+
+	// Range over the products coming from request and append in the above slice
 	for _, p := range r.Products {
 		productIDs = append(productIDs, p.ProductId)
 	}
+
+	// Now based on the productIDs of the ordered products, get the entire products using the catalogClient
 	orderedProducts, err := s.catalogClient.GetProducts(ctx, productIDs, 0, 0, "")
 	if err != nil {
 		log.Println("Error getting products: ", err)
 		return nil, errors.New("products not found")
 	}
 
-	// Construct products
+	// Create empty slice for storing the ordered products
 	products := []OrderedProduct{}
+
+	// Range over the orderedProducts to include only the products with valid quantity
 	for _, p := range orderedProducts {
 		product := OrderedProduct{
 			ID:          p.ID,
@@ -91,14 +99,14 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 		}
 	}
 
-	// Call service implementation
+	// Call the service function to post the order in the DB
 	order, err := s.service.PostOrder(ctx, r.AccountId, products)
 	if err != nil {
 		log.Println("Error posting order: ", err)
 		return nil, errors.New("could not post order")
 	}
 
-	// Make response order
+	// Convert the order to protobuf to match the return statements
 	orderProto := &pb.Order{
 		Id:         order.ID,
 		AccountId:  order.AccountID,
@@ -121,44 +129,55 @@ func (s *grpcServer) PostOrder(ctx context.Context, r *pb.PostOrderRequest) (*pb
 }
 
 func (s *grpcServer) GetOrdersForAccount(ctx context.Context, r *pb.GetOrdersForAccountRequest) (*pb.GetOrdersForAccountResponse, error) {
+
+	// Call the service function to Get all orders for a particular accountID
 	accountOrders, err := s.service.GetOrderForAccount(ctx, r.AccountId)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	// Get all ordered products
+	// Create a map to store all the product IDs in the order
 	productIDMap := map[string]bool{}
+
+	// Range over the orders of a particular account to store the product IDs avoiding duplicates - using map
 	for _, o := range accountOrders {
 		for _, p := range o.Products {
 			productIDMap[p.ID] = true
 		}
 	}
+
+	// Creating an empty slice to store all productIDs in the map
 	productIDs := []string{}
+	// Range over the map to fill the above slice
 	for id := range productIDMap {
 		productIDs = append(productIDs, id)
 	}
+
+	// Call the GetProducts from catalogClient to get all products using the productIDs
 	products, err := s.catalogClient.GetProducts(ctx, productIDs, 0, 0, "")
 	if err != nil {
 		log.Println("Error getting account products: ", err)
 		return nil, err
 	}
 
-	// Construct orders
+	// Constructing a variable to store the orders in the protobuf response
 	orders := []*pb.Order{}
+
+	// Range over the account orders to return the values
 	for _, o := range accountOrders {
-		// Encode order
 		op := &pb.Order{
 			AccountId:  o.AccountID,
 			Id:         o.ID,
 			TotalPrice: o.TotalPrice,
 			Products:   []*pb.Order_OrderProduct{},
 		}
+		// Marshalling time to send over grpc
 		op.CreatedAt, _ = o.CreatedAt.MarshalBinary()
 
-		// Decorate orders with products
+		// Range over o.Products (it has only ID and quantity)
 		for _, product := range o.Products {
-			// Populate product fields
+			// range over products (it has all the product info)
 			for _, p := range products {
 				if p.ID == product.ID {
 					product.Name = p.Name
@@ -167,7 +186,7 @@ func (s *grpcServer) GetOrdersForAccount(ctx context.Context, r *pb.GetOrdersFor
 					break
 				}
 			}
-
+			// Convert to grpc format
 			op.Products = append(op.Products, &pb.Order_OrderProduct{
 				Id:          product.ID,
 				Name:        product.Name,

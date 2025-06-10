@@ -30,6 +30,7 @@ func (c *Client) Close() {
 }
 
 func (c *Client) PostAccount(ctx context.Context, name string) (*Account, error) {
+	// Call the function to create account
 	res, err := c.service.PostAccount(ctx, &pb.PostAccountRequest{Name: name})
 	if err != nil {
 		return nil, err
@@ -42,6 +43,7 @@ func (c *Client) PostAccount(ctx context.Context, name string) (*Account, error)
 }
 
 func (c *Client) GetAccount(ctx context.Context, id string) (*Account, error) {
+	// Call the function to Get account with a particular ID
 	res, err := c.service.GetAccount(ctx, &pb.GetAccountRequest{Id: id})
 	if err != nil {
 		return nil, err
@@ -54,11 +56,17 @@ func (c *Client) GetAccount(ctx context.Context, id string) (*Account, error) {
 }
 
 func (c *Client) GetAccounts(ctx context.Context, skip uint64, take uint64) ([]Account, error) {
+
+	// Call the function to get all accounts
 	res, err := c.service.GetAccounts(ctx, &pb.GetAccountsRequest{Skip: skip, Take: take})
 	if err != nil {
 		return nil, err
 	}
+
+	// Empty slice to store accounts
 	accounts := []Account{}
+
+	// Range over the accounts and fill in the slice
 	for _, a := range res.Accounts {
 		accounts = append(accounts, Account{
 			ID:   a.Id,

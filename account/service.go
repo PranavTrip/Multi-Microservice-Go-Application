@@ -26,6 +26,8 @@ func NewService(r Repository) Service {
 
 // Method to handle the repository's PutAccount function
 func (s *accountService) PostAccount(ctx context.Context, name string) (*Account, error) {
+
+	// Construct account to be posted
 	a := &Account{
 		Name: name,
 		ID:   ksuid.New().String(),
